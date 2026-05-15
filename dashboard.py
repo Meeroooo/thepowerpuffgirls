@@ -9,20 +9,23 @@ import json
 from functools import wraps
 import numpy as np
 from sklearn.manifold import TSNE
+from PIL import Image
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="CyberEx Recommender - Powerpuff Girls",
+    page_title="Powerpuff Girls - Cybersecurity Exercise Recommender",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ── Custom CSS ──────────────────────────────────────────────────────────────
+# ── Custom CSS with Floating Chat Button ─────────────────────────────────────
 st.markdown("""
 <style>
     .main { background-color: #0f1117; }
     .block-container { padding-top: 1rem; }
+    
+    /* Metric Cards */
     .metric-card {
         background: #1e2130;
         border: 1px solid #2d3250;
@@ -31,6 +34,8 @@ st.markdown("""
     }
     .metric-label { color: #8b9ab5; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
     .metric-value { color: #e2e8f0; font-size: 1.3rem; font-weight: 700; margin-top: 0.2rem; }
+    
+    /* Tags */
     .tag-pill {
         display: inline-block;
         background: #1e3a5f;
@@ -51,6 +56,8 @@ st.markdown("""
         color: #fca5a5;
         border: 1px solid #991b1b;
     }
+    
+    /* Section Headers */
     .section-header {
         font-size: 1rem;
         font-weight: 600;
@@ -59,6 +66,8 @@ st.markdown("""
         padding-bottom: 0.3rem;
         margin-bottom: 0.6rem;
     }
+    
+    /* Cards */
     .org-card {
         background: #1a1f35;
         border: 1px solid #2d3250;
@@ -74,6 +83,8 @@ st.markdown("""
         color: #86efac;
         font-size: 0.85rem;
     }
+    
+    /* Chat Messages */
     .chat-message {
         padding: 0.8rem;
         margin-bottom: 0.5rem;
@@ -93,6 +104,96 @@ st.markdown("""
         background: #3d1e1e;
         color: #fca5a5;
     }
+    
+    /* Explanation Boxes */
+    .why-box {
+        background: #151c2c;
+        border-left: 3px solid #3b82f6;
+        border-radius: 0 8px 8px 0;
+        padding: 0.8rem 1rem;
+        color: #cbd5e1;
+        font-size: 0.88rem;
+        line-height: 1.6;
+        margin-bottom: 0.8rem;
+    }
+    .why-box-ollama {
+        background: #1a2634;
+        border-left: 3px solid #10b981;
+        border-radius: 0 8px 8px 0;
+        padding: 0.8rem 1rem;
+        color: #cbd5e1;
+        font-size: 0.88rem;
+        line-height: 1.6;
+        margin-bottom: 0.8rem;
+    }
+    
+    /* Floating Chat Button - Bottom Right */
+    .floating-chat-btn {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        z-index: 1000;
+        background: linear-gradient(135deg, #1e3a5f, #2563a8);
+        border-radius: 50px;
+        padding: 12px 28px;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+        border: 1px solid #3b82f6;
+        font-weight: 600;
+        color: #e2e8f0;
+        font-size: 1rem;
+        text-align: center;
+    }
+    .floating-chat-btn:hover {
+        transform: scale(1.05);
+        background: linear-gradient(135deg, #2563a8, #3b82f6);
+        box-shadow: 0 6px 20px rgba(59,130,246,0.4);
+    }
+    
+    /* Chat Panel - Slides from bottom right */
+    .chat-panel {
+        position: fixed;
+        bottom: 85px;
+        right: 25px;
+        width: 380px;
+        height: 500px;
+        background: #1a1f35;
+        border: 1px solid #2d3250;
+        border-radius: 12px;
+        z-index: 999;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    .chat-header {
+        background: #1e3a5f;
+        padding: 12px 16px;
+        border-radius: 12px 12px 0 0;
+        border-bottom: 1px solid #2d3250;
+        font-weight: 600;
+        color: #e2e8f0;
+    }
+    .chat-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+    }
+    .chat-footer {
+        padding: 12px;
+        border-top: 1px solid #2d3250;
+    }
+    .close-chat {
+        float: right;
+        cursor: pointer;
+        color: #8b9ab5;
+        font-size: 1.2rem;
+    }
+    .close-chat:hover {
+        color: #fca5a5;
+    }
+    
+    /* Misc */
     div[data-testid="stSelectbox"] label { color: #93c5fd !important; font-weight: 600; }
     h1, h2, h3 { color: #e2e8f0 !important; }
     .stDataFrame { border-radius: 8px; overflow: hidden; }
@@ -104,8 +205,37 @@ st.markdown("""
         font-size: 0.7rem;
         margin-left: 10px;
     }
+    .logo-text {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .main-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #e2e8f0;
+    }
+    .subtitle {
+        font-size: 0.8rem;
+        color: #8b9ab5;
+        margin-top: -8px;
+        margin-bottom: 16px;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# ── Load Logo (if exists) ────────────────────────────────────────────────────
+def load_logo():
+    base = os.path.dirname(__file__)
+    logo_path = os.path.join(base, "logo.png")
+    if os.path.exists(logo_path):
+        try:
+            return Image.open(logo_path)
+        except:
+            return None
+    return None
+
+logo = load_logo()
 
 # ── Session State ──────────────────────────────────────────────────────────
 if "chat_messages" not in st.session_state:
@@ -279,10 +409,14 @@ def tag_pills(tags, css_class="tag-pill"):
 
 # ── Sidebar ──────────────────────────────────────────────────────────────
 with st.sidebar:
+    # Logo and branding in sidebar
+    if logo:
+        st.image(logo, width=60)
+    st.markdown("## Powerpuff Girls")
+    st.markdown("*Cybersecurity Exercise Recommender System*")
+    st.markdown("---")
+    
     col_title, col_dev = st.columns([3, 1])
-    with col_title:
-        st.markdown("## CyberEx Recommender")
-        st.markdown("*Powerpuff Girls - COS70008*")
     with col_dev:
         if st.button("🔧 Dev", key="dev_toggle"):
             st.session_state.dev_mode = not st.session_state.dev_mode
@@ -332,17 +466,53 @@ with st.sidebar:
     blend_weight = st.slider("Blending Weight (α)", min_value=0.0, max_value=1.0, value=0.9, step=0.05,
                              help="α=1.0 means pure CF, α=0.0 means pure content")
 
-# ── Chat Toggle Button ────────────────────────────────────────────────────
-chat_col1, chat_col2, chat_col3 = st.columns([5, 1, 1])
-with chat_col2:
-    if st.button("💬 Chat", key="chat_toggle"):
-        st.session_state.show_chat = not st.session_state.show_chat
+# ── Floating Chat Button (HTML/JS for position) ──────────────────────────────
+# This uses st.markdown with unsafe_allow_html to create a clickable floating button
+# The button toggles session state, but we need JS for actual popup
 
-# ── Chat Panel ────────────────────────────────────────────────────────────
+# We'll use a simpler approach: st.button in a fixed position via CSS
+# For the actual chat panel, we'll use a container that shows/hides based on session state
+
+# ── Main Header with Logo ──────────────────────────────────────────────────
+col_logo, col_title_main = st.columns([1, 5])
+with col_logo:
+    if logo:
+        st.image(logo, width=80)
+    else:
+        st.markdown("🛡️")
+with col_title_main:
+    st.markdown('<div class="main-title">Powerpuff Girls</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Cybersecurity Exercise Recommender System</div>', unsafe_allow_html=True)
+
+st.markdown(f"### Exercise Recommendations - Org {selected_org:03d}")
+
+if org_info is not None:
+    threats = parse_tags(org_info.get("Threats", ""))
+    st.markdown(
+        f"**{org_info.get('Industry','—')}** · {org_info.get('Region','—')} · {org_info.get('Size','—')} · "
+        + tag_pills(threats[:3], "tag-pill-threat"),
+        unsafe_allow_html=True
+    )
+
+st.markdown("---")
+
+# ── Floating Chat Button and Panel ──────────────────────────────────────────
+# Floating Button
+chat_button_clicked = st.button("💬 Ask Assistant", key="floating_chat_btn")
+if chat_button_clicked:
+    st.session_state.show_chat = not st.session_state.show_chat
+
+# Chat Panel (shows when show_chat is True)
 if st.session_state.show_chat:
     with st.container():
-        st.markdown("---")
-        st.markdown("### Cybersecurity Assistant")
+        st.markdown("""
+        <div style="position: fixed; bottom: 85px; right: 25px; width: 380px; background: #1a1f35; border: 1px solid #2d3250; border-radius: 12px; z-index: 999; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+            <div style="background: #1e3a5f; padding: 12px 16px; border-radius: 12px 12px 0 0; border-bottom: 1px solid #2d3250; font-weight: 600; color: #e2e8f0;">
+                Assistant
+                <span style="float: right; cursor: pointer; color: #8b9ab5;" onclick="parent.document.querySelector('button[data-testid=\\"baseButton-secondary\\"]').click();">✕</span>
+            </div>
+            <div style="flex: 1; overflow-y: auto; padding: 12px; max-height: 380px;">
+        """, unsafe_allow_html=True)
         
         if st.session_state.ollama_available is None:
             st.session_state.ollama_available = check_ollama_available()
@@ -356,14 +526,17 @@ if st.session_state.show_chat:
                 else:
                     st.markdown(f"""<div class="chat-message chat-bot">🤖 {msg["content"]}</div>""", unsafe_allow_html=True)
         
-        user_input = st.text_input("Ask about cybersecurity exercises...", key="chat_input", 
-                                   placeholder="Example: Which exercise covers ransomware?")
+        st.markdown('</div><div style="padding: 12px; border-top: 1px solid #2d3250;">', unsafe_allow_html=True)
+        
+        user_input = st.text_input("Ask a question", key="chat_input_floating", 
+                                   placeholder="Example: Which exercise covers ransomware?",
+                                   label_visibility="collapsed")
         
         col_send, col_clear = st.columns([1, 1])
         with col_send:
-            send_button = st.button("Send", key="send_msg")
+            send_button = st.button("Send", key="send_msg_floating")
         with col_clear:
-            clear_button = st.button("Clear Chat", key="clear_chat")
+            clear_button = st.button("Clear", key="clear_chat_floating")
         
         if clear_button:
             st.session_state.chat_messages = []
@@ -386,28 +559,15 @@ if st.session_state.show_chat:
                     bot_response = get_ollama_chat_response(user_input, org_info, context)
                     st.session_state.chat_messages.append({"role": "bot", "content": bot_response})
                 else:
-                    st.session_state.chat_messages.append({"role": "bot", "content": "Ollama not connected. Please start Ollama service."})
+                    st.session_state.chat_messages.append({"role": "bot", "content": "Ollama not connected."})
                 
                 st.rerun()
+        
+        st.markdown('</div></div>', unsafe_allow_html=True)
 
-# ── Main Header ──────────────────────────────────────────────────────────
-st.markdown(f"## Exercise Recommendations - Org {selected_org:03d}")
-
-if org_info is not None:
-    threats = parse_tags(org_info.get("Threats", ""))
-    st.markdown(
-        f"**{org_info.get('Industry','—')}** · {org_info.get('Region','—')} · {org_info.get('Size','—')} · "
-        + tag_pills(threats[:3], "tag-pill-threat"),
-        unsafe_allow_html=True
-    )
-
-st.markdown("---")
-
-# ── Determine which view to show ──────────────────────────────────────────
+# ── Main Content (User View or Dev View) ────────────────────────────────────
 if st.session_state.dev_mode:
-    # ========================================================================
-    # DEV VIEW - Model Analysis for Professors
-    # ========================================================================
+    # DEV VIEW
     st.markdown("## 🔧 Developer View: Model Analysis")
     st.caption("Technical analysis of the recommendation models - for evaluation purposes")
     st.markdown("---")
@@ -423,7 +583,6 @@ if st.session_state.dev_mode:
                 display_df[c] = pd.to_numeric(display_df[c], errors='coerce').round(4)
             st.dataframe(display_df, use_container_width=True, hide_index=True)
             
-            # Bar chart for flat metrics
             flat_cols = ['precision', 'recall', 'f1']
             flat_available = [c for c in flat_cols if c in comparison_df.columns]
             if flat_available:
@@ -436,20 +595,6 @@ if st.session_state.dev_mode:
                 fig.update_layout(yaxis=dict(range=[0, 1.1]), plot_bgcolor='#0f1117',
                                  paper_bgcolor='#0f1117', font=dict(color='#cbd5e1'))
                 st.plotly_chart(fig, use_container_width=True)
-            
-            # Ranking metrics chart
-            ranking_cols = [c for c in comparison_df.columns if c.startswith(('P@', 'R@', 'NDCG@', 'TopK'))]
-            if ranking_cols:
-                st.markdown("### Ranking Metrics (Precision@K, Recall@K, NDCG@K)")
-                rank_plot = comparison_df.melt(id_vars=['model'],
-                                               value_vars=ranking_cols,
-                                               var_name='metric', value_name='score')
-                fig_rank = px.bar(rank_plot, x='metric', y='score', color='model',
-                                  barmode='group', text_auto='.3f',
-                                  title="Ranking Metrics by Model")
-                fig_rank.update_layout(plot_bgcolor='#0f1117', paper_bgcolor='#0f1117',
-                                       font=dict(color='#cbd5e1', size=10))
-                st.plotly_chart(fig_rank, use_container_width=True)
         else:
             st.warning("Run train_phase3.py to generate model comparison data.")
         
@@ -477,7 +622,6 @@ if st.session_state.dev_mode:
                 tsne = TSNE(n_components=2, random_state=42, perplexity=30)
                 latent_2d = tsne.fit_transform(latent_vectors)
                 
-                # Get maturity levels for coloring
                 maturity_levels = []
                 for org_id in org_ids:
                     org_row = orgs_df[orgs_df['ORGID'] == org_id]
@@ -510,7 +654,6 @@ if st.session_state.dev_mode:
                 st.dataframe(org_gaps[['Rank', 'TechniqueID', 'AE_Score', 'MLP_Score', 'Ensemble_Score']].head(15),
                            use_container_width=True, hide_index=True)
                 
-                # Score distribution
                 fig = px.bar(org_gaps.head(10), x='Rank', y='Ensemble_Score',
                             title="Top 10 Gap Scores for Selected Organization",
                             labels={'Ensemble_Score': 'Prediction Score'})
@@ -520,12 +663,9 @@ if st.session_state.dev_mode:
             st.info("Run train_phase3.py to generate technique gap predictions.")
 
 else:
-    # ========================================================================
-    # USER VIEW - Clean Exercise Recommender Dashboard
-    # ========================================================================
-    
+    # USER VIEW
     org_recs = merged[merged["ORGID"] == selected_org].sort_values("Rank").reset_index(drop=True)
-    org_recs = org_recs.head(top_k_value)  # Apply Top-K slider
+    org_recs = org_recs.head(top_k_value)
     
     # Top metrics
     m1, m2, m3, m4 = st.columns(4)
@@ -559,11 +699,11 @@ else:
     
     st.markdown("")
     
-    # Two column layout: Exercises + Tactic Coverage
+    # Two column layout
     col_left, col_right = st.columns([3, 2])
     
     with col_left:
-        st.markdown('<div class="section-header">Top 10 Recommended Exercises</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">Recommended Exercises</div>', unsafe_allow_html=True)
         
         for _, row in org_recs.iterrows():
             threat_tags = parse_tags(row.get("ExThreat", ""))
@@ -669,7 +809,6 @@ else:
             </div>
             """, unsafe_allow_html=True)
             
-            # Show technique IDs
             technique_tags = parse_tags(selected_row.get("ExTechniqueIDs", ""))
             if technique_tags:
                 st.markdown("**ATT&CK Technique IDs covered:**")
@@ -684,7 +823,6 @@ else:
             else:
                 if st.button("Generate AI Explanation", key=f"ai_explain_{int(selected_row['EXID'])}"):
                     with st.spinner("Generating explanation..."):
-                        # Fix: Convert org_info Series to dictionary properly
                         if org_info is not None and not org_info.empty:
                             org_profile = {
                                 "Industry": str(org_info.get("Industry", "—")) if pd.notna(org_info.get("Industry")) else "—",
