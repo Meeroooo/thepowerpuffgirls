@@ -1,6 +1,1 @@
-# In your Phase3 folder, create .gitignore
-echo "__pycache__/" >> .gitignore
-echo "*.pyc" >> .gitignore
-echo ".cache_ollama_*" >> .gitignore
-echo "feedback.csv" >> .gitignore
-echo "venv311/" >> .gitignore
+
