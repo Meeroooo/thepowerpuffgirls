@@ -13,8 +13,7 @@ import base64
 
 # ── Page config ─────────────────────────────────────────────────────────────[...]
 st.set_page_config(
-    page_title="CyberEx Recommender — Powerpuff Girls",
-    page_icon="🛡️",
+    page_title="Powerpuff Girls | Cybersecurity Exercise Recommender",
     layout="wide",
     initial_sidebar_state="expanded"
 )
