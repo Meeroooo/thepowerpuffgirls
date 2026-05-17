@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.manifold import TSNE
 import base64
 
-# ── Page config ───────────────────────────────────────────────────────────────
+# ── Page config ─────────────────────────────────────────────────────────────[...]
 st.set_page_config(
     page_title="CyberEx Recommender — Powerpuff Girls",
     page_icon="🛡️",
@@ -42,7 +42,7 @@ def logo_img(width=48):
                 f'style="vertical-align:middle;border-radius:6px;">')
     return '<span style="font-size:1.6rem">🛡️</span>'
 
-# ── CSS ───────────────────────────────────────────────────────────────────────
+# ── CSS ──────────────────────────────────────────────────────────────–[...]
 st.markdown("""
 <style>
     .main { background-color: #000000; }
@@ -141,13 +141,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Session state ─────────────────────────────────────────────────────────────
+# ── Session state ───────────────────────────────────────────────────────────[...]
 for k, v in {"chat_messages": [], "ollama_available": None,
              "last_query": None, "dev_mode": False}.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# ── Ollama ────────────────────────────────────────────────────────────────────
+# ── Ollama ─────────────────────────────────────────────────────────────–[...]
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL   = "llama3.2:3b"
 OLLAMA_TIMEOUT = 30
@@ -210,7 +210,7 @@ def get_ollama_chat_response(user_message, org_profile, context):
         pass
     return "Ollama connection error. Run `ollama serve` first."
 
-# ── Data loading ──────────────────────────────────────────────────────────────
+# ── Data loading ───────────────────────────────────────────────────────────–[...]
 @st.cache_data
 def load_data():
     base = os.path.dirname(os.path.abspath(__file__))
@@ -251,7 +251,7 @@ except FileNotFoundError:
 
 ae_history, latent_vectors = load_training_data()
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Helpers ─────────────────────────────────────────────────────────────[...]
 def parse_tags(val):
     if pd.isna(val) or str(val).strip() == "": return []
     return [t.strip() for t in str(val).split(";") if t.strip()]
@@ -259,7 +259,7 @@ def parse_tags(val):
 def tag_pills(tags, css="tag-pill"):
     return " ".join(f'<span class="{css}">{t}</span>' for t in tags)
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ── Sidebar ─────────────────────────────────────────────────────────────[...]
 with st.sidebar:
     st.markdown(
         f'<div style="display:flex;align-items:center;gap:12px;padding:0.6rem 0 1.1rem 0">'
@@ -343,7 +343,7 @@ with st.sidebar:
 
     # Input row
     chat_input = st.chat_input("Ask about exercises…", key="sidebar_chat_input")
-    col_a, col_b = st.columns([3,1])
+    col_a, col_b = st.columns([2, 1])
     with col_b:
         if st.button("Clear", key="chat_clear_btn", use_container_width=True):
             st.session_state.chat_messages = []
@@ -369,7 +369,7 @@ if chat_input and chat_input.strip() and chat_input != st.session_state.last_que
     st.session_state.chat_messages.append({"role": "bot", "content": resp})
     st.rerun()
 
-# ── Main header ───────────────────────────────────────────────────────────────
+# ── Main header ───────────────────────────────────────────────────────────––[...]
 st.markdown(
     f'<div style="display:flex;align-items:center;gap:18px;margin-bottom:0.4rem">'
     f'{logo_img(88)}'
@@ -396,7 +396,7 @@ if org_info is not None:
         st.markdown(tag_pills(threats[:4],"tag-pill-threat"), unsafe_allow_html=True)
     st.markdown("---", unsafe_allow_html=False)
 
-# ── Main content ──────────────────────────────────────────────────────────────
+# ── Main content ───────────────────────────────────────────────────────────–[...]
 if st.session_state.dev_mode:
     # ══ DEVELOPER VIEW ════════════════════════════════════════════════════════
     st.markdown("## Developer View — Model Analysis")
